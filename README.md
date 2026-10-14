@@ -1,208 +1,66 @@
-Welcome to your new TanStack Start app!
+# Sandboxx Lock
 
-# Getting Started
+Keypad lock and web app for Sandboxx. Users ask for access with a reason, a SuperUser of their club approves, and the user gets a 6-digit PIN for the door that is valid for 12 hours. The ESP32 lock checks every PIN with the server and every attempt is logged.
 
-To run this application:
+## Requirements
+
+- [Bun](https://bun.sh) 1.3+
+- Docker Desktop (for Postgres)
+- Arduino IDE 2 (for the lock)
+
+## Database setup
+
+1. Copy the env file and fill in `JWT_SECRET` and `LOCK_API_KEY` (any random string of 32+ characters).
+   ```bash
+   cp .env.example .env
+   ```
+2. Start Postgres.
+   ```bash
+   docker compose --profile dev up -d db
+   ```
+3. Create the tables.
+   ```bash
+   bun run db:migrate
+   ```
+4. Create the first admin. `--demo` also adds a test club, a test SuperUser and a test user.
+   ```bash
+   bun run db:seed your.email@hyderabad.bits-pilani.ac.in --demo
+   ```
+
+## Development
 
 ```bash
 bun install
-bun --bun run dev
+bun run dev
 ```
 
-# Building For Production
+> [!NOTE]
+> Google sign in needs `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID` (a Web client from Google Cloud Console with `http://localhost:3000` as an authorised JavaScript origin). Without it, set `DEV_LOGIN=true` and use the dev login box on `/login` with any seeded email.
 
-To build this application for production:
+Emails to SuperUsers are sent only when `EMAIL_USER` and `EMAIL_PASS` (a Gmail app password) are set.
+
+Before committing, these must pass:
 
 ```bash
-bun --bun run build
+bun run typecheck
+bun run lint
+bun run build
 ```
 
-## Styling
+After changing `src/db/schema.ts`, run `bun run db:generate` and commit the new file in `drizzle/`.
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+## Lock
 
-### Removing Tailwind CSS
+1. In Arduino IDE, install the "esp32 by Espressif" board package and the ArduinoJson library.
+2. Copy `firmware/sandboxx-lock/config.example.h` to `config.h` in the same folder and fill in the WiFi, server URL and `LOCK_API_KEY`.
+3. Plug the board into the USB-C port marked COM, pick "ESP32S3 Dev Module" and the COM port, then upload `firmware/sandboxx-lock/sandboxx-lock.ino`.
+4. Open the Serial Monitor at 115200 baud, type a PIN and press enter. Green means open, red means wrong PIN or locked out, blue means the server couldn't be reached.
 
-If you prefer not to use Tailwind CSS:
+> [!NOTE]
+> The ESP32 only sees 2.4 GHz WiFi. When testing with a phone hotspot, turn on "maximise compatibility" (iPhone) or set the AP band to 2.4 GHz (Android).
 
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Remove `@tailwindcss/vite` and `tailwindcss` from `package.json`
-
-## Linting & Formatting
-
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
+The lock API can also be tested without the board:
 
 ```bash
-bun --bun run lint
-bun --bun run format
-bun --bun run check
+curl -X POST http://localhost:3000/api/lock/verify -H "Authorization: Bearer <LOCK_API_KEY>" -H "Content-Type: application/json" -d '{"pin":"123456"}'
 ```
-
-
-## Deploy with Nitro
-
-This project uses Nitro as a generic server adapter, so it can run on any Node-compatible host.
-
-```bash
-npm run build
-node dist/server/index.mjs
-```
-
-The build output is a self-contained Node server. To deploy, push the `dist/` directory to your host (Render, Fly.io, your own VPS, etc.) and run the server command above.
-
-For host-specific presets (Vercel, Netlify, Cloudflare, AWS Lambda, etc.) and tuning, see https://v3.nitro.build/deploy.
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
