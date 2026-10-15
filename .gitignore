@@ -14,6 +14,8 @@ todos.json
 
 # AI hand-off files
 .ai/
+AGENTS.md
+CLAUDE.md
 
 # esp32 secrets
 firmware/**/config.h
