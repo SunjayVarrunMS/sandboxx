@@ -1,5 +1,6 @@
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <Keypad.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 
@@ -7,8 +8,23 @@
 
 // onboard rgb led on the esp32-s3 devkit, some clones use 38 instead
 const int RGB_LED_PIN = 48;
+const int RELAY_PIN = 21;
+// most cheap relay modules switch on LOW, set false if yours switches on HIGH
+const bool RELAY_ACTIVE_LOW = true;
 const int OPEN_MS = 5000;
 const int WIFI_RETRY_MS = 10000;
+
+const byte KEYPAD_ROWS = 4;
+const byte KEYPAD_COLS = 4;
+char keys[KEYPAD_ROWS][KEYPAD_COLS] = {
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '#', 'D'},
+};
+byte rowPins[KEYPAD_ROWS] = {4, 5, 6, 7};
+byte colPins[KEYPAD_COLS] = {15, 16, 17, 18};
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, KEYPAD_ROWS, KEYPAD_COLS);
 
 String pinBuffer = "";
 unsigned long lastWifiAttempt = 0;
@@ -52,10 +68,15 @@ void connectNetwork() {
   }
 }
 
+void setRelay(bool on) {
+  digitalWrite(RELAY_PIN, on != RELAY_ACTIVE_LOW ? HIGH : LOW);
+}
+
 void openDoor() {
+  setRelay(true);
   setLed(0, 40, 0);
-  // TODO: digitalWrite(RELAY_PIN, HIGH) here once the relay is wired
   delay(OPEN_MS);
+  setRelay(false);
   setLed(0, 0, 0);
 }
 
@@ -103,7 +124,7 @@ void submitPin(const String &pin) {
   }
 }
 
-// same handler for the serial monitor now and the keypad later
+// same handler for the keypad and the serial monitor
 void handleKey(char key) {
   if (isDigit(key) && pinBuffer.length() < 6) {
     pinBuffer += key;
@@ -121,14 +142,22 @@ void handleKey(char key) {
 }
 
 void setup() {
+  // first thing in setup so the door stays shut on boot
+  pinMode(RELAY_PIN, OUTPUT);
+  setRelay(false);
   Serial.begin(115200);
   setLed(0, 0, 0);
   secureClient.setCACert(ROOT_CA);
   connectNetwork();
-  Serial.println("type a 6 digit pin and press enter");
+  Serial.println("type a 6 digit pin on the keypad or here, then # or enter");
 }
 
 void loop() {
+  char key = keypad.getKey();
+  if (key) {
+    handleKey(key);
+  }
+
   while (Serial.available()) {
     handleKey(Serial.read());
   }

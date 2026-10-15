@@ -51,10 +51,21 @@ After changing `src/db/schema.ts`, run `bun run db:generate` and commit the new 
 
 ## Lock
 
-1. In Arduino IDE, install the "esp32 by Espressif" board package and the ArduinoJson library.
+1. In Arduino IDE, install the "esp32 by Espressif" board package and the ArduinoJson and Keypad (by Mark Stanley, Alexander Brevig) libraries.
 2. Copy `firmware/sandboxx-lock/config.example.h` to `config.h` in the same folder and fill in the WiFi, server URL and `LOCK_API_KEY`.
-3. Plug the board into the USB-C port marked COM, pick "ESP32S3 Dev Module" and the COM port, then upload `firmware/sandboxx-lock/sandboxx-lock.ino`.
-4. Open the Serial Monitor at 115200 baud, type a PIN and press enter. Green means open, red means wrong PIN or locked out, blue means the server couldn't be reached.
+3. Wire the keypad and relay (pins are set at the top of the sketch).
+4. Plug the board into the USB-C port marked COM, pick "ESP32S3 Dev Module" and the COM port, then upload `firmware/sandboxx-lock/sandboxx-lock.ino`.
+5. Type a 6-digit PIN on the keypad and press `#` (`*` clears). Green means open, red means wrong PIN or locked out, blue means the server couldn't be reached. Without a keypad, type the PIN in the Serial Monitor at 115200 baud and press enter.
+
+| Part | Pin | ESP32-S3 |
+| --- | --- | --- |
+| 4x4 keypad | rows 1-4 | GPIO 4, 5, 6, 7 |
+| 4x4 keypad | columns 1-4 | GPIO 15, 16, 17, 18 |
+| Relay module | IN | GPIO 21 |
+| Relay module | VCC / GND | 5V / GND |
+
+> [!NOTE]
+> Most relay modules switch on LOW. If the door opens when it should be shut, set `RELAY_ACTIVE_LOW` to `false` in the sketch.
 
 > [!NOTE]
 > The ESP32 only sees 2.4 GHz WiFi. When testing with a phone hotspot, turn on "maximise compatibility" (iPhone) or set the AP band to 2.4 GHz (Android).
