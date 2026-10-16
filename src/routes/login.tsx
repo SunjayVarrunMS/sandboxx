@@ -1,6 +1,7 @@
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import {
 	createFileRoute,
+	Link,
 	redirect,
 	useNavigate,
 	useRouter,
@@ -95,6 +96,9 @@ function LoginPage() {
 							</Button>
 						</form>
 					)}
+					<Link to="/privacy" className="text-xs text-neutral-500 underline">
+						Privacy policy
+					</Link>
 				</CardContent>
 			</Card>
 		</div>
