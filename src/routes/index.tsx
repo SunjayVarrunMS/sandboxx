@@ -321,9 +321,10 @@ function InsideCard({
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>In Sandboxx now</CardTitle>
+				<CardTitle>Recently entered</CardTitle>
 				<CardDescription>
-					People who opened the door with a PIN that's still valid.
+					People who opened the door with a PIN that's still valid. The lock
+					doesn't log exits, so some of them may have left.
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
