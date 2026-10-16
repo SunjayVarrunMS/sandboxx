@@ -19,3 +19,6 @@ CLAUDE.md
 
 # esp32 secrets
 firmware/**/config.h
+
+.vercel
+.env*

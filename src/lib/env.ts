@@ -10,6 +10,7 @@ const serverSchema = z.object({
 	POSTGRES_USER: z.string().min(1),
 	POSTGRES_PASSWORD: z.string().min(1),
 	POSTGRES_DB: z.string().min(1),
+	DB_SSL: z.stringbool().default(false),
 	FRONTEND_URL: z.url(),
 	JWT_SECRET: z.string().min(32),
 	LOCK_API_KEY: z.string().min(32),
@@ -25,7 +26,7 @@ const parsed = serverSchema.parse(process.env, {
 		"invalid/missing environment variables, please check .env.example for a list of required variables",
 });
 
-export const DATABASE_URL = `postgres://${parsed.POSTGRES_USER}:${parsed.POSTGRES_PASSWORD}@${parsed.DB_HOST}:${parsed.PGPORT}/${parsed.POSTGRES_DB}`;
+export const DATABASE_URL = `postgres://${parsed.POSTGRES_USER}:${parsed.POSTGRES_PASSWORD}@${parsed.DB_HOST}:${parsed.PGPORT}/${parsed.POSTGRES_DB}${parsed.DB_SSL ? "?sslmode=verify-full" : ""}`;
 export const PROD = parsed.NODE_ENV === "production";
 
 export default {
