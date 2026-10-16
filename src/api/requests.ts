@@ -13,7 +13,7 @@ import {
 import env from "@/lib/env";
 import { type AuthEnv, requireRole, type User } from "./auth";
 import { db } from "./db";
-import { emailSuperUsers } from "./email";
+import { emailDecision, emailSuperUsers } from "./email";
 import { validate } from "./validate";
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
@@ -293,8 +293,15 @@ const review = async (
 	decision: "approve" | "reject",
 ) => {
 	const [request] = await db
-		.select({ clubId: accessRequestsTable.clubId })
+		.select({
+			clubId: accessRequestsTable.clubId,
+			clubName: clubsTable.name,
+			name: usersTable.name,
+			email: usersTable.email,
+		})
 		.from(accessRequestsTable)
+		.innerJoin(usersTable, eq(usersTable.id, accessRequestsTable.userId))
+		.innerJoin(clubsTable, eq(clubsTable.id, accessRequestsTable.clubId))
 		.where(
 			and(
 				eq(accessRequestsTable.id, requestId),
@@ -340,6 +347,10 @@ const review = async (
 	if (res.rowCount !== 1) {
 		return { message: "Request already reviewed", status: 409 as const };
 	}
+
+	await emailDecision(request, request.clubName, decision, reviewer.name).catch(
+		(err) => console.error("failed to email requester", err),
+	);
 
 	return null;
 };
