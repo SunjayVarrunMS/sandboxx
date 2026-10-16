@@ -11,6 +11,14 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { client, handleErrors, loadData } from "@/lib/api";
 import { requireRole } from "@/lib/guards";
@@ -35,6 +43,16 @@ type CurrentRequest = {
 	reviewedBy: string | null;
 };
 
+type HistoryRow = {
+	id: number;
+	clubName: string;
+	reason: string;
+	status: string;
+	expiresAt: string | null;
+	createdAt: string;
+	entries: number;
+};
+
 export const Route = createFileRoute("/")({
 	beforeLoad: requireRole(),
 	loader: () =>
@@ -42,13 +60,14 @@ export const Route = createFileRoute("/")({
 			loadData(client.requests.current.$get()),
 			loadData(client.clubs.$get()),
 			loadData(client.requests.inside.$get()),
+			loadData(client.requests.history.$get()),
 		]),
 	component: Dashboard,
 });
 
 function Dashboard() {
 	const { user } = Route.useRouteContext();
-	const [current, clubs, inside] = Route.useLoaderData();
+	const [current, clubs, inside, history] = Route.useLoaderData();
 
 	const isPending = current?.status === "pending";
 	const isActive =
@@ -81,6 +100,7 @@ function Dashboard() {
 					/>
 				)}
 				<InsideCard inside={inside} />
+				{history.length > 0 && <HistoryCard history={history} />}
 			</main>
 		</>
 	);
@@ -321,6 +341,53 @@ function InsideCard({
 						))}
 					</ul>
 				)}
+			</CardContent>
+		</Card>
+	);
+}
+
+function HistoryCard({ history }: { history: HistoryRow[] }) {
+	// an approved request stays "approved" in the db after its pin runs out
+	const statusOf = (row: HistoryRow) =>
+		row.status === "approved" &&
+		row.expiresAt &&
+		new Date(row.expiresAt) < new Date()
+			? "expired"
+			: row.status;
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>Your history</CardTitle>
+				<CardDescription>
+					Your recent requests and how many times each PIN opened the door.
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Time</TableHead>
+							<TableHead>Club</TableHead>
+							<TableHead>Reason</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead className="text-right">Entries</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{history.map((row) => (
+							<TableRow key={row.id}>
+								<TableCell>{formatTime(row.createdAt)}</TableCell>
+								<TableCell>{row.clubName}</TableCell>
+								<TableCell className="max-w-64 whitespace-normal">
+									{row.reason}
+								</TableCell>
+								<TableCell>{statusOf(row)}</TableCell>
+								<TableCell className="text-right">{row.entries}</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
 			</CardContent>
 		</Card>
 	);

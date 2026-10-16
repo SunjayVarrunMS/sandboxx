@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { and, desc, eq, gt, inArray, or } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -147,6 +147,30 @@ const requests = new Hono<AuthEnv>()
 		}
 
 		return c.json({ success: true, data: { message: "Request cancelled" } });
+	})
+	.get("/history", async (c) => {
+		const history = await db
+			.select({
+				id: accessRequestsTable.id,
+				clubName: clubsTable.name,
+				reason: accessRequestsTable.reason,
+				status: accessRequestsTable.status,
+				expiresAt: accessRequestsTable.expiresAt,
+				createdAt: accessRequestsTable.createdAt,
+				entries: count(lockEventsTable.id),
+			})
+			.from(accessRequestsTable)
+			.innerJoin(clubsTable, eq(clubsTable.id, accessRequestsTable.clubId))
+			.leftJoin(
+				lockEventsTable,
+				eq(lockEventsTable.requestId, accessRequestsTable.id),
+			)
+			.where(eq(accessRequestsTable.userId, c.var.user.id))
+			.groupBy(accessRequestsTable.id, clubsTable.name)
+			.orderBy(desc(accessRequestsTable.createdAt))
+			.limit(20);
+
+		return c.json({ success: true, data: history });
 	})
 	.get("/inside", async (c) => {
 		const rows = await db
