@@ -1,4 +1,4 @@
-import { and, count, eq, gt, ne } from "drizzle-orm";
+import { and, count, eq, gt } from "drizzle-orm";
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
 import { z } from "zod";
@@ -21,12 +21,13 @@ const lock = new Hono()
 			const now = new Date();
 			const windowStart = new Date(now.getTime() - LOCKOUT_MINUTES * 60 * 1000);
 
+			// only wrong pins count, so typing during a lockout doesn't extend it
 			const [{ failures }] = await db
 				.select({ failures: count() })
 				.from(lockEventsTable)
 				.where(
 					and(
-						ne(lockEventsTable.result, "granted"),
+						eq(lockEventsTable.result, "denied"),
 						gt(lockEventsTable.createdAt, windowStart),
 					),
 				);
