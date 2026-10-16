@@ -14,9 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { client, handleErrors, loadData } from "@/lib/api";
 import { requireRole } from "@/lib/guards";
-import { formatTime } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 
 const PENDING_REFRESH_MS = 10_000;
+const PIN_SLOTS = [0, 1, 2, 3, 4, 5];
 
 type Club = {
 	id: number;
@@ -115,15 +116,32 @@ function PinCard({ request }: { request: CurrentRequest }) {
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-2">
-				<p className="font-mono text-5xl font-semibold tracking-[0.3em]">
-					{request.pin}
-				</p>
+				<PinBoxes pin={request.pin} />
 				<p className="text-sm text-neutral-600">
 					Valid till {formatTime(request.expiresAt ?? "")} ({hours}h {minutes}m
 					left). Don't share it, every entry is logged against you.
 				</p>
 			</CardContent>
 		</Card>
+	);
+}
+
+// the boxes stay empty until a superuser approves and the server hands out a pin
+function PinBoxes({ pin }: { pin: string | null }) {
+	return (
+		<div className="flex gap-2">
+			{PIN_SLOTS.map((slot) => (
+				<span
+					key={slot}
+					className={cn(
+						"flex size-12 items-center justify-center rounded-md border-2 font-mono text-3xl font-semibold",
+						pin ? "border-neutral-900" : "border-dashed bg-neutral-50",
+					)}
+				>
+					{pin?.[slot]}
+				</span>
+			))}
+		</div>
 	);
 }
 
@@ -163,6 +181,7 @@ function PendingCard({
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
+				<PinBoxes pin={null} />
 				{club && club.superUsers.length > 0 && (
 					<div className="flex flex-col gap-1 text-sm">
 						<p className="text-neutral-600">In a hurry? Call a SuperUser:</p>
