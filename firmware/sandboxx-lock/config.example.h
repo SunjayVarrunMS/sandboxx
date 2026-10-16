@@ -9,6 +9,10 @@
 // same value as LOCK_API_KEY in the server's .env
 #define LOCK_API_KEY "paste-lock-api-key-here"
 
+// 6 digit pins that open the door only when the server can't be reached,
+// give them to admins only and change them if one leaks
+const char *OFFLINE_PINS[] = {"change-me"};
+
 // Let's Encrypt root, only used when SERVER_URL is https
 #define ROOT_CA \
   "-----BEGIN CERTIFICATE-----\n" \

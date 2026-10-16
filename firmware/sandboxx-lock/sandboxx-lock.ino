@@ -80,10 +80,29 @@ void openDoor() {
   setLed(0, 0, 0);
 }
 
+// these only work while the server is down, and those entries aren't logged
+bool isOfflinePin(const String &pin) {
+  for (const char *offlinePin : OFFLINE_PINS) {
+    if (pin == offlinePin) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void serverUnreachable(const String &pin) {
+  if (isOfflinePin(pin)) {
+    Serial.println("server unreachable, opening with offline pin");
+    openDoor();
+  } else {
+    blink(0, 0, 40, 3);
+  }
+}
+
 void submitPin(const String &pin) {
   connectNetwork();
   if (WiFi.status() != WL_CONNECTED) {
-    blink(0, 0, 40, 3);
+    serverUnreachable(pin);
     return;
   }
 
@@ -102,7 +121,7 @@ void submitPin(const String &pin) {
   if (status != 200) {
     Serial.printf("server error: %d\n", status);
     http.end();
-    blink(0, 0, 40, 3);
+    serverUnreachable(pin);
     return;
   }
 
@@ -111,7 +130,7 @@ void submitPin(const String &pin) {
   http.end();
   if (err) {
     Serial.println("bad response from server");
-    blink(0, 0, 40, 3);
+    serverUnreachable(pin);
     return;
   }
 

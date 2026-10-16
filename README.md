@@ -55,7 +55,7 @@ After changing `src/db/schema.ts`, run `bun run db:generate` and commit the new 
 2. Copy `firmware/sandboxx-lock/config.example.h` to `config.h` in the same folder and fill in the WiFi, server URL and `LOCK_API_KEY`.
 3. Wire the keypad and relay (pins are set at the top of the sketch).
 4. Plug the board into the USB-C port marked COM, pick "ESP32S3 Dev Module" and the COM port, then upload `firmware/sandboxx-lock/sandboxx-lock.ino`.
-5. Type a 6-digit PIN on the keypad and press `#` (`*` clears). Green means open, red means wrong PIN or locked out, blue means the server couldn't be reached. Without a keypad, type the PIN in the Serial Monitor at 115200 baud and press enter.
+5. Type a 6-digit PIN on the keypad and press `#` (`*` clears). Green means open, red means wrong PIN or locked out, blue means the server couldn't be reached. While the server is unreachable, the `OFFLINE_PINS` from `config.h` still open the door (not logged). Without a keypad, type the PIN in the Serial Monitor at 115200 baud and press enter.
 
 | Part | Pin | ESP32-S3 |
 | --- | --- | --- |
