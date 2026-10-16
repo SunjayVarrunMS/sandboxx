@@ -117,7 +117,8 @@ const requests = new Hono<AuthEnv>()
 				.insert(accessRequestsTable)
 				.values({ userId: user.id, clubId, reason });
 
-			emailSuperUsers(clubId, user, reason).catch((err) =>
+			// awaited because vercel can freeze the function once the response is sent
+			await emailSuperUsers(clubId, user, reason).catch((err) =>
 				console.error("failed to email superusers", err),
 			);
 
