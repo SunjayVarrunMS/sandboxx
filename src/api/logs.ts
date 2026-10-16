@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, gt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import {
@@ -9,6 +9,8 @@ import {
 } from "@/db/schema";
 import { type AuthEnv, requireRole } from "./auth";
 import { db } from "./db";
+
+const USAGE_DAYS = 14;
 
 const reviewersTable = alias(usersTable, "reviewers");
 
@@ -53,6 +55,29 @@ const logs = new Hono<AuthEnv>()
 			.limit(200);
 
 		return c.json({ success: true, data: requests });
+	})
+	.get("/usage", async (c) => {
+		// days are cut at midnight IST, not UTC
+		const day = sql<string>`to_char(${lockEventsTable.createdAt} at time zone 'Asia/Kolkata', 'YYYY-MM-DD')`;
+		const since = new Date(Date.now() - USAGE_DAYS * 24 * 60 * 60 * 1000);
+
+		const usage = await db
+			.select({ day, clubName: clubsTable.name, entries: count() })
+			.from(lockEventsTable)
+			.innerJoin(
+				accessRequestsTable,
+				eq(accessRequestsTable.id, lockEventsTable.requestId),
+			)
+			.innerJoin(clubsTable, eq(clubsTable.id, accessRequestsTable.clubId))
+			.where(
+				and(
+					eq(lockEventsTable.result, "granted"),
+					gt(lockEventsTable.createdAt, since),
+				),
+			)
+			.groupBy(day, clubsTable.name);
+
+		return c.json({ success: true, data: usage });
 	})
 	.get("/export", requireRole("admin"), async (c) => {
 		const rows = await db
